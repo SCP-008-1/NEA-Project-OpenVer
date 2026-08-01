@@ -32,6 +32,7 @@ Build an evidence-first, self-hostable DAO3 / dao3.fun compatibility path that c
 - Add or update focused conformance tests for runtime behavior changes.
 - Do not run broad tests or builds unless the user asks; report the exact commands that should be run.
 - Do not commit, push, reset, clean, rebase, change remotes, or move repository directories without explicit user approval.
+- Follow the code standards below for all new or substantially modified code; with no lint/format tooling installed, manual review enforces them.
 
 ## Patch tool requirement
 
@@ -51,34 +52,78 @@ Build an evidence-first, self-hostable DAO3 / dao3.fun compatibility path that c
 - Do not rename or delete a referenced path until callers, generators, tests, reports, documentation, ignore rules, and provenance have been audited.
 - After analysis, stop and request approval before implementation when the task is an architecture or migration phase.
 
-## Token efficiency
+## Code standards
 
-- Start with `git status --short`, a targeted file search, or a narrow test; do not dump the whole repository tree or large files.
-- Use `rg -n` to locate symbols first, then read only the surrounding lines required for the task.
-- Do not reread a file after a successful patch unless verification requires it; inspect the diff instead.
-- Keep shell output bounded with `Select-Object -First`, `-Last`, or a focused pattern filter.
-- Never send complete logs, generated bundles, caches, or minified assets to an AI agent. Summarize failures locally first.
-- Reuse `Docs/ai/project-context.md` and one task-specific context instead of repeating repository background in every prompt.
-- One task ID, one acceptance contract, and one declared write scope per agent turn.
-- End each turn with a compact handoff containing changed files, validation, risks, and exactly one next action.
-- Prefer a single grouped shell command over many overlapping inspection calls.
+The repository has no ESLint/Prettier configuration; this section is the format and behavior authority for hand-written code. Vendored evidence — `Shared/mudb/`, `Backend/local-player/archive/`, `Backend/local-player/runtime/`, generated catalogs, manifests, and reports — is exempt and must not be reformatted.
 
-## Maintainability gate
+### Formatting
 
-The project prioritizes maintainability over one-off execution. These rules are mandatory for new or substantially modified implementation code.
+- Follow `.editorconfig`: UTF-8, LF line endings, final newline, no trailing whitespace; 2-space indentation (4 for `.ps1`).
+- Keep lines at or below 80 characters where practical; do not extend existing long lines as part of unrelated edits.
+- Match the conventions of the file being edited (indentation, quotes, semicolons).
+
+### JavaScript / ESM
+
+- New hand-written code is ESM only (`import`/`export`); no CommonJS.
+- Import standard library modules with `node:` prefixes, grouped before local imports.
+- Prefer named exports; avoid default exports in new modules.
+- Prefer `const`; use `let` only when rebinding; never `var`.
+- Use `async`/`await` instead of promise chains and callbacks.
+- Follow the repo style: double quotes, no semicolons (as in `Backend/local-player/src/`).
+- Top-level module code must be limited to `const` initialization; no other side effects at import time.
+
+### Naming
+
+- Files and directories: kebab-case (e.g. `client-runtime.mjs`).
+- Functions and variables: camelCase.
+- Classes, types, and interfaces: PascalCase.
+- Module-level constants: UPPER_SNAKE_CASE.
+- Booleans: `is`/`has`/`can` prefixes.
+- Names state intent; no single-letter names outside tight loops and math.
+
+### TypeScript
+
+- New or substantially modified `.ts` code must compile under `strict`.
+- Public APIs need explicit types; add JSDoc when the contract is non-obvious.
+
+### Structure
 
 - Keep interface, application/service, evidence/data access, and utility concerns separated. Do not place protocol parsing, business decisions, filesystem access, and HTTP/Player orchestration in one function.
+- Keep functions focused on a single responsibility; prefer small cohesive modules and a clear seam over speculative abstraction.
+
+### Errors and validation
+
+- Prefer guard clauses and early returns; keep conditional nesting at three levels or less.
+- Never swallow exceptions. Distinguish expected domain failures from system failures, preserve the cause, and emit useful structured diagnostics at important boundaries.
+- Validate all external input for presence, type, format, and range.
+- Add boundary validation, timeout behavior, and failure handling for filesystem, network, subprocess, and runtime bridge calls.
+- Fail loudly on programmer error; degrade gracefully only for expected domain failures.
+
+### Dependencies
+
+- New dependencies require a short justification, a version/compatibility check, and confirmation that the standard library or an existing dependency is insufficient.
+
+### Comments and diagnostics
+
+- Write comments in English; explain why, not what.
+- Explain non-obvious compatibility workarounds at the call site.
+- Never leave commented-out code or debug output.
+- Logs must be actionable without exposing private data or tokens.
+
+### Tests
+
+- Use the Node built-in test runner (`node:test`) for new tests.
+- Place focused tests next to the code they cover (e.g. `src/<pkg>/test/`).
+- Add a regression test for every fixed failure; do not mark a task complete based on a happy path alone.
+
+## Maintainability limits
+
 - Keep ordinary business functions at or below 80 lines and utility functions at or below 50 lines. Split longer functions unless the file is generated or a compatibility adapter requires a documented exception.
 - Keep ordinary implementation files at or below 500 lines. Generated catalogs, manifests, minified bundles, and archived evidence are exempt but must not be edited as hand-written source.
 - Extract shared logic when similar behavior appears three or more times. Do not copy and paste protocol, validation, logging, or error handling branches.
-- Replace magic numbers and strings with named constants or configuration. Validate all external input for presence, type, format, and range.
-- Keep conditional nesting at three levels or less. Prefer guard clauses, extracted functions, and explicit strategy maps over long conditional ladders or chained ternaries.
-- Never swallow exceptions. Distinguish expected domain failures from system failures, preserve the cause, and emit useful structured diagnostics at important boundaries.
-- Add boundary validation, timeout behavior, and failure handling for filesystem, network, subprocess, and runtime bridge calls.
-- Explain why for non-obvious compatibility workarounds. Do not leave stale commented-out code or debug output.
-- New dependencies require a short justification, a version/compatibility check, and confirmation that the standard library or an existing dependency is insufficient.
-- Add focused tests for new behavior and regression tests for fixed failures. Do not mark a task complete based only on a successful happy path.
-- Do not use the maintainability limits to justify speculative over-abstraction. Prefer small cohesive modules and a clear seam over a framework.
+- Replace magic numbers and strings with named constants or configuration.
+- Do not use these limits to justify speculative over-abstraction. Prefer small cohesive modules and a clear seam over a framework.
+- Enforcement: `pwsh tools/check-maintainability.ps1` lists tracked files over 500 lines; run it from the repo root.
 
 ## Evidence migration gate
 
@@ -100,6 +145,7 @@ Before reporting completion, check:
 6. Are logs actionable without exposing private data or tokens?
 7. Is there a focused test or a clearly recorded validation blocker?
 8. Did the change preserve the repository layer boundaries and evidence policy?
+9. Does the code follow the Code standards section (formatting, naming, ESM, structure, comments)?
 
 ## Current priority
 
