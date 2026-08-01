@@ -22,6 +22,11 @@ test("API ABI completeness has no structural or propagation gaps", () => {
   for (const [side, catalog] of Object.entries(catalogs)) {
     assert.equal(report.summary.catalogs[side], catalog.entries.length, `${side} catalog count must match the generated report`);
   }
+  assert.deepEqual(report.summary.catalogs, {
+    client: 133,
+    server: 1158,
+    shared: 131,
+  });
 });
 
 test("rest parameters retain their documented ABI shape", () => {
